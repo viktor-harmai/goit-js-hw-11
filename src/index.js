@@ -63,7 +63,7 @@ function renderGallery(hits) {
 
   if (totalHits === 0) {
     loadMoreBtn.hide();
-    return Notify.failure(
+    Notify.failure(
       'Sorry, there are no images matching your search query. Please try again.'
     );
   } else if (page === 2) {
@@ -74,13 +74,14 @@ function renderGallery(hits) {
   } else if (page - 1 === totalPage) {
     loadMoreBtn.hide();
     appendGalleryMarkup(hits);
+    lightbox.refresh();
     scrolPage();
     Notify.info("We're sorry, but you've reached the end of search results.");
   } else {
     appendGalleryMarkup(hits);
     lightbox.refresh();
-    loadMoreBtn.show();
     scrolPage();
+    loadMoreBtn.show();
   }
 }
 
