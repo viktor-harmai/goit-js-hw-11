@@ -1,98 +1,104 @@
-// import getRefs from './get-refs';
-// import API from './fetchCountries';
-// import { Notify } from 'notiflix/build/notiflix-notify-aio';
-// import debounce from 'lodash.debounce';
+import getRefs from './get-refs';
+import ApiService from './components/api-service';
+import imgCardTpl from './templates/img-card.hbs';
+import LoadMoreBtn from './components/load-more-btn';
+import SimpleLightbox from 'simplelightbox';
+import { Notify } from 'notiflix/build/notiflix-notify-aio';
+import './css/styles.css';
+import '@fortawesome/fontawesome-free/css/all.css';
+import 'simplelightbox/dist/simple-lightbox.min.css';
 
-// import './css/styles.css';
+const newApiService = new ApiService();
+const loadMoreBtn = new LoadMoreBtn({ selector: '.load-more', hidden: true });
+const refs = getRefs();
 
-// const DEBOUNCE_DELAY = 300;
+let lightbox = new SimpleLightbox('.gallery a', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
 
-// const refs = getRefs();
+refs.searchForm.addEventListener('submit', onSearch);
+loadMoreBtn.refs.button.addEventListener('click', fetchData);
 
-// refs.inputEl.addEventListener('input', debounce(onInput, DEBOUNCE_DELAY));
+function onSearch(e) {
+  e.preventDefault();
 
-// function onInput(e) {
-//   const inputText = e.target.value.trim();
+  newApiService.query = e.currentTarget.elements.searchQuery.value.trim();
 
-//   if (refs.inputEl.value === '') {
-//     clearMarkupCountryCard();
-//     clearMarkupCountrysList();
-//     return;
-//   }
+  if (newApiService.query === '') {
+    return Notify.failure('Field cannot be empty');
+  }
 
-//   API.fetchCountries(inputText).then(renderCountry).catch(onFetchError);
+  loadMoreBtn.show();
+  newApiService.resetPage();
+  clearGalleryContainer();
+  fetchData();
+}
+
+async function fetchData() {
+  loadMoreBtn.hide();
+  try {
+    const data = await newApiService.fetchData();
+    // console.log(data);
+    renderGallery(data);
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+// function fetchData() {
+//   loadMoreBtn.hide();
+//   newApiService
+//     .fetchData()
+//     .then(renderGallery)
+//     .catch(error => {
+//       console.log(error);
+//     });
 // }
 
-// function onFetchError(error) {
-//   clearMarkupCountryCard();
-//   clearMarkupCountrysList();
+function renderGallery(hits) {
+  const page = newApiService.page;
+  const totalPage = newApiService.totalPage;
+  const totalHits = newApiService.totalHits;
 
-//   Notify.failure('Oops, there is no country with that name');
-// }
+  if (totalHits === 0) {
+    loadMoreBtn.hide();
+    return Notify.failure(
+      'Sorry, there are no images matching your search query. Please try again.'
+    );
+  } else if (page === 2) {
+    appendGalleryMarkup(hits);
+    lightbox.refresh();
+    loadMoreBtn.show();
+    Notify.info(`Hooray! We found ${totalHits} images.`);
+  } else if (page - 1 === totalPage) {
+    loadMoreBtn.hide();
+    appendGalleryMarkup(hits);
+    scrolPage();
+    Notify.info("We're sorry, but you've reached the end of search results.");
+  } else {
+    appendGalleryMarkup(hits);
+    lightbox.refresh();
+    loadMoreBtn.show();
+    scrolPage();
+  }
+}
 
-// function renderCountry(name) {
+function appendGalleryMarkup(imgCard) {
+  refs.galleryContainer.insertAdjacentHTML('beforeend', imgCardTpl(imgCard));
+}
 
-//   if (name.length > 10) {
-//     clearMarkupCountryCard();
-//     clearMarkupCountrysList();
-//     Notify.info('Too many matches found. Please enter a more specific name.');
-//   } else if (name.length >= 2 && name.length <= 10) {
-//     markupCountrysList(name);
-//     clearMarkupCountryCard();
-//   } else {
-//     markupCountryCard(name);
-//     clearMarkupCountrysList();
-//   }
-// }
+function clearGalleryContainer() {
+  refs.galleryContainer.innerHTML = '';
+}
 
-// function markupCountryCard(country) {
-//   const markup = country
-//     .map(
-//       ({
-//         name: { official },
-//         capital,
-//         population,
-//         flags: { svg },
-//         languages,
-//       }) => {
-//         const langList = Object.values(languages).map(
-//           language => ' ' + language
-//         );
-//         return `  <div class='country-info__name-thumb'><img src="${svg}" alt="flag" width="30" height="20" class="country-info__img" /><span
-//       class="country-info__name"
-//     >${official}</span></div>
-//     <ul class="country-info__list">
-//       <li class="country-info__item">
-//         <p class="country-info__text"><b>Capital:</b> <span class="country-info__text-description">${capital}</span></p>
-//       </li>
-//       <li class="country-info__item">
-//         <p class="country-info__text"><b>Population:</b> <span class="country-info__text-description">${population}</span></p>
-//       </li>
-//       <li class="country-info__item">
-//         <p class="country-info__text"><b>Languages:</b> <span class="country-info__text-description">${langList}</span></p>
-//       </li>
-//     </ul>`;
-//       }
-//     )
-//     .join('');
-//   refs.countryInfo.innerHTML = markup;
-// }
+function scrolPage() {
+  const { height: cardHeight } = document
+    .querySelector('.gallery')
+    .firstElementChild.getBoundingClientRect();
 
-// function markupCountrysList(countrys) {
-//   const markup = countrys
-//     .map(({ name: { official }, flags: { svg } }) => {
-//       return `<li class='country-item'><img src="${svg}" alt="flag" width="30" height="20" class="country-item__img" /><span
-//       class="country-item__name"
-//     >${official}</span></li>`;
-//     })
-//     .join('');
-//   refs.countryList.innerHTML = markup;
-// }
-
-// function clearMarkupCountryCard() {
-//   refs.countryInfo.innerHTML = '';
-// }
-
-// function clearMarkupCountrysList() {
-//   refs.countryList.innerHTML = '';
-// }
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
+}

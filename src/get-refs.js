@@ -1,7 +1,6 @@
-// export default function getRefs() {
-//   return {
-//     inputEl: document.querySelector('#search-box'),
-//     countryList: document.querySelector('.country-list'),
-//     countryInfo: document.querySelector('.country-info'),
-//   };
-// }
+export default function getRefs() {
+  return {
+    searchForm: document.querySelector('#search-form'),
+    galleryContainer: document.querySelector('.gallery'),
+  };
+}
